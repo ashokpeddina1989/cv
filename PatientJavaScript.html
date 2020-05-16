@@ -1,0 +1,502 @@
+<html>
+<head>
+
+
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.16.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<style>
+
+h1{
+
+  font-size: 3.5rem;
+  line-height: 1.5;
+  padding:20px;
+  
+  
+}
+body{
+  font-family: "Montserrat";
+  text-align: center;
+  color: #40514E;
+  
+}
+
+.container{
+text-align:center;position:absolute;left:300px;
+padding:50px;
+height: 50px;
+}
+#colorset{
+color:red;
+}
+
+.create_table{
+visibility:hidden;
+}
+
+
+</style>
+
+
+
+<script type="text/javascript">
+
+AWS.config.update({
+  region: "us-east-1",
+  // The endpoint should point to the local or remote computer where DynamoDB (downloadable) is running.
+  //endpoint: 'http://localhost:8000',
+  endpoint: "https://dynamodb.us-east-1.amazonaws.com",
+  /*
+    accessKeyId and secretAccessKey defaults can be used while using the downloadable version of DynamoDB. 
+    For security reasons, do not store AWS Credentials in your files. Use Amazon Cognito instead.
+  */
+  accessKeyId: "AKIAJ6AXSIE32AG7NREQ",
+  secretAccessKey: "9lTyjvXUf422UKe9DEbaVy4zwz77JIcsDW5gw474"
+  
+ //accessKeyId: "ASIA2N6QRKAVIAJX355I",
+  //secretAccessKey: "OgBxV2w1g8DyxC0ebDENDzbiwE8tUVu0BX4o3NjE",
+  //SessionToken: "FwoGZXIvYXdzEFIaDPkjSV2d94AC8fj9pyLRASplx1WaCF2AtwG66S3ncCpsyRGzbtqxVXnszAm8jhBUFp02o7F7CxQ6UNNXNw/QX7Hz/cfq9w1V3FgrqFY34KZeliltjdVzAkX6ksXloSJH64RthfMqzLcdsln56D9oEhdQUTkcZBUpqhg0JdA7PvZ6axZhdduxx4OnSIK0UzBQvUXzW2tXBFMco66SsJ55dibudUboSozBndVzll7/Dp1sTWeL/XslRXEZQZHQSjxEjWqEDhcOgW++FojZgadmZCAjl8sZgi8sboH/BIvxpPe4KMOx+fUFMi2wsqrykUoX4g7tRW/y6Ypk1F6nTku/VMNl5AcXcSCNCZqs7/LpTb5IhG9SrFo="
+});
+
+  /* 
+     Uncomment the following code to configure Amazon Cognito and make sure to 
+     remove the endpoint, accessKeyId and secretAccessKey specified in the code above. 
+     Make sure Cognito is available in the DynamoDB web service region (specified above).
+     Finally, modify the IdentityPoolId and the RoleArn with your own.
+  */
+/*
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+IdentityPoolId: "us-west-2:12345678-1ab2-123a-1234-a12345ab12",
+RoleArn: "arn:aws:iam::123456789012:role/dynamocognito"
+});
+*/
+
+var dynamodb = new AWS.DynamoDB();
+var docClient = new AWS.DynamoDB.DocumentClient();
+function createpatient_data() {
+    var params = {
+        TableName : "patient_data",
+        KeySchema: [
+            { AttributeName: "DeviceId", KeyType: "HASH"},
+            { AttributeName: "Timestamp", KeyType: "RANGE" }
+        ],
+        AttributeDefinitions: [       
+            { AttributeName: "DeviceId", AttributeType: "S" },
+            { AttributeName: "Timestamp", AttributeType: "S" }
+        ],
+        ProvisionedThroughput: {       
+            ReadCapacityUnits: 5,
+            WriteCapacityUnits: 5
+        }
+    };
+
+    dynamodb.createTable(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to create table: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "Created table: " + "\n" + JSON.stringify(data, undefined, 2);
+        }
+    });
+}
+
+function deletepatient_data() {
+    var params = {
+        TableName : "patient_data"
+    };
+
+    dynamodb.deleteTable(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to delete table: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "Table deleted.";
+        }
+    });
+}
+
+function listpatient_data() {
+    var params = {};
+    dynamodb.listTables(params, function(err, data) {
+    if (err){
+        document.getElementById('textarea').innerHTML = "Unable to list tables: " + "\n" + JSON.stringify(err, undefined, 2);
+    }
+    else{
+     document.getElementById('textarea').innerHTML = "List of tables: " + "\n" + JSON.stringify(data, undefined, 2);
+    }
+});
+}
+
+function createItem() {
+    var params = {
+        TableName :"patient_data",
+        Item:{
+            "DeviceId": "00:00:12:00:0ACdd",
+            "Timestamp": "5/16/2020",
+            "Temperature" : 35,
+			"HeartRate":  68
+        }
+    };
+    docClient.put(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to add item: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "PutItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+        }
+    });
+}
+
+// Timestamp    DeviceId   Temperature   HeartRate
+//patient_data
+function readItem() {
+    var table = "patient_data";
+    var DeviceId = "00:00:12:00:0Abc";
+    var Timestamp = "5/15/2020";
+
+    var params = {
+        TableName: table,
+        Key:{
+            "DeviceId": DeviceId,
+            "Timestamp": Timestamp
+        }
+    };
+	var a = [],txt = " ";
+    docClient.get(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to read item: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "GetItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+			var obj = JSON.parse(JSON.stringify(data, undefined, 2));
+		//var obj = JSON.parse(data);
+		//	document.getElementById('textarea').innerHTML = "Year: " + obj.Item.year + "\n" + "title: " + obj.Item.title;
+			//document.getElementById('textarea').innerHTML = "Year: " + obj.Item.year + "\n" + "title: " + obj.Item.title;
+			console.log(obj.Item.year);
+			
+			txt += "<table border='1'>"
+			txt += "<tr><th> DeviceId </th> <th> Timestamp </th><th> Temperature </th><th> HeartRate </th></tr>"; 
+    for (x in obj) {
+	//var p = new String(obj[x].year);
+		if (obj[x].payload.HeartRate){
+			obj[x].HeartRate = obj[x].payload.HeartRate;
+			obj[x].Temperature = obj[x].payload.Temperature;
+
+			}
+		if (  (obj[x].HeartRate)){
+		
+			txt += "<tr id='colorset'><td>" + "<input id='colorset' type='button' value=" +obj[x].DeviceId + "></td>" + "<td>" + obj[x].Timestamp +  
+			"</td>"+ "<td>" + obj[x].Temperature +"</td>" + "<td>" + obj[x].HeartRate +"</td> </tr>";
+			
+		}
+		else{
+		
+       txt += "<tr ><td>" + "<input value=" +obj[x].DeviceId + "></td>" + "<td>" + obj[x].Timestamp + 
+			"</td>"+ "<td>" + obj[x].Temperature +"</td>" + "<td>" + obj[x].HeartRate +"</td> </tr>";
+	  }
+    }
+    txt += "</table>"
+	document.getElementById('data_read').innerHTML = txt;
+	console.log(txt);
+	//colors= document.getElementById('colorset');
+	//colors.style.color = "#AA0000"
+	
+			/*a.push(JSON.stringify(data, undefined, 2));
+			a.push(JSON.stringify(data, undefined, 2));
+			var col = a[0];
+			
+			var key = Object.keys(a.Item)[0];
+			//var statistics = data.Includes.Products[key].Statistics;
+			console.log(key);
+			console.log(a[1]);*/
+			//var content = '<table class="table table-hover">';
+			// obj = $.parseJSON(obj);
+			//obj= JSON.parse(obj);
+          /*  var heading = "<tr>";
+            var data = "";
+            $.each(obj.Item, function(ke, va) {
+                heading += '<th>' + ke + '</th>';
+            });
+            $.each(obj.Item, function(key, value) { 
+
+                data += "<tr>";
+                $.each(value, function(k, v) {
+                   data += '<td>' + v + '</td>';
+                });
+                data += "</tr>";
+            });
+            heading += "</tr>";
+           content += heading + data + "</table>";
+            $('#data').append(content);*/
+        }
+    });
+}
+
+function updateItem() {
+    var table = "patient_data";
+    var year = 2015;
+    var title = "The Big New Movie";
+
+    var params = {
+        TableName:table,
+        Key:{
+            "year": year,
+            "title": title
+        },
+        UpdateExpression: "set info.rating = :r, info.plot=:p, info.actors=:a",
+        ExpressionAttributeValues:{
+            ":r":5.5,
+            ":p":"Everything happens all at once.",
+            ":a":["Larry", "Moe", "Curly"]
+        },
+        ReturnValues:"UPDATED_NEW"
+    };
+
+    docClient.update(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to update item: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "UpdateItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+        }
+    });
+}
+
+function deleteItem() {
+    var table = "patient_data";
+    var year = 2015;
+    var title = "The Big New Movie";
+
+    var params = {
+        TableName:table,
+        Key:{
+            "year":year,
+            "title":title
+        }
+    };
+    docClient.delete(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML = "Unable to delete item: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            document.getElementById('textarea').innerHTML = "DeleteItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+        }
+    });
+}
+
+function queryData() {
+    document.getElementById('textarea').innerHTML = "";
+    document.getElementById('textarea').innerHTML += "Querying for patient_data from 1985.";
+
+    var params = {
+        TableName : "patient_data",
+        KeyConditionExpression: "#yr = :yyyy",
+        ExpressionAttributeNames:{
+            "#yr": "year"
+        },
+        ExpressionAttributeValues: {
+            ":yyyy":1985
+        }
+    };
+
+    docClient.query(params, function(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML += "Unable to query. Error: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            data.Items.forEach(function(movie) {
+                document.getElementById('textarea').innerHTML += "\n" + movie.year + ": " + movie.title;
+            });
+         
+        }
+    });
+}
+
+
+//Timestamp    DeviceId   Temperature   HeartRate
+
+//patient_data
+function scanData() {
+    document.getElementById('textarea').innerHTML = "";
+    document.getElementById('textarea').innerHTML += "Scanning for patient_data." + "\n";
+
+    var params = {
+        TableName: "patient_data"
+ //       ProjectionExpression: "#yr, title, info.rating",
+ //       FilterExpression: "#yr between :start_yr and :end_yr",
+ //       ExpressionAttributeNames: {
+ //           "#yr": "year"
+ //       },
+ //       ExpressionAttributeValues: {
+ //           ":start_yr": 1950,
+ //           ":end_yr": 1975
+  //      }
+    };
+
+    docClient.scan(params, onScan);
+	var i =0,txt=" ";
+	
+    function onScan(err, data) {
+        if (err) {
+            document.getElementById('textarea').innerHTML += "Unable to scan the table: " + "\n" + JSON.stringify(err, undefined, 2);
+        } else {
+            // Print all the patient_data
+			i++;
+			console.log(data.Items.length);
+            document.getElementById('textarea').innerHTML += "Scan succeeded: " + "\n";
+			
+			
+			
+            data.Items.forEach(function(patient_data) {
+				console.log(patient_data);
+                document.getElementById('textarea').innerHTML += patient_data.DeviceId + ": " + patient_data.payload +  "\n";
+				if (patient_data.payload){
+			patient_data.HeartRate = patient_data.payload.HeartRate;
+			patient_data.Temperature = patient_data.payload.Temperature;
+
+			}
+			txt += "<table border='1' cellpadding='15'>";
+			txt += "<tr><th> DeviceId </th> <th> Timestamp </th><th> Temperature </th><th> HeartRate </th></tr>";
+		if (  (patient_data.HeartRate > 70)){
+		
+			txt += "<tr id='colorset'><td>" + "<input id='colorset' type='button' value=" +patient_data.DeviceId + "></td>" + "<td>" + patient_data.Timestamp +  
+			"</td>"+ "<td>" + patient_data.Temperature +"</td>" + "<td>" + patient_data.HeartRate +"</td> </tr>";
+			
+		}
+		else{
+		
+       txt += "<tr ><td>"+ patient_data.DeviceId + "</td>" + "<td>" + patient_data.Timestamp + 
+			"</td>"+ "<td>" + patient_data.Temperature +"</td>" + "<td>" + patient_data.HeartRate +"</td> </tr>";
+	  }
+    
+		txt += "</table>";
+		txt += "</table>";
+		document.getElementById('data_read').innerHTML = txt;
+				
+            });
+			}
+			
+
+            // Continue scanning if we have more patient_data (per scan 1MB limitation)
+       //     document.getElementById('textarea').innerHTML += "Scanning for more..." + "\n";
+       //     params.ExclusiveStartKey = data.LastEvaluatedKey;
+       //     if (i < data.Items.length){
+		//	txt = " ";
+		//	docClient.scan(params, onScan);
+		//	}
+			            
+        }
+		
+	
+    }
+
+
+function processFile(evt) {
+    var patient_dataProcessed = 0;
+    document.getElementById('textarea').innerHTML = "";
+    document.getElementById('textarea').innerHTML += "Importing patient_data into DynamoDB. Please wait..." + "\n";
+    var file = evt.target.files[0];
+    if (file) {
+        var r = new FileReader();
+
+        r.onload = function(e) {
+            var contents = e.target.result;
+            var allpatient_data = JSON.parse(contents);
+
+            allpatient_data.forEach(function (movie) {
+
+                var params = {
+                    TableName: "patient_data",
+                    Item: {
+                        "year": movie.year,
+                        "title": movie.title,
+                        "info": movie.info
+                    }
+                };
+                docClient.put(params, function (err, data) {
+                    ++patient_dataProcessed;
+                    if (err) {
+                        console.log("Unable to add movie: " + movie.title + "\n");
+                    } else {
+                        switch(patient_dataProcessed) {
+                            case 2501:
+                                document.getElementById('textarea').innerHTML += "_______________" + "\n";
+                                document.getElementById('textarea').innerHTML += "Halfway done..." + "\n";
+                                document.getElementById('textarea').innerHTML += "_______________" + "\n";
+                                break;
+                            case 3751:
+                                document.getElementById('textarea').innerHTML += "______________" + "\n";
+                                document.getElementById('textarea').innerHTML += "Almost done..." + "\n";
+                                document.getElementById('textarea').innerHTML += "______________" + "\n";
+                                break;
+                            case 5001:
+                                document.getElementById('textarea').innerHTML += "______________________" + "\n";
+                                document.getElementById('textarea').innerHTML += "Finished processing!" + "\n";
+                                document.getElementById('textarea').innerHTML += "______________________" + "\n";
+                                break;
+                            default: document.getElementById('textarea').innerHTML += "Added: " + movie.title + "\n";
+                        }
+                        textarea.scrollTop = textarea.scrollHeight;
+                    }
+                });
+            });
+    };
+        r.readAsText(file);
+    } else {
+        alert("Could not read movie data file");
+    }
+}
+/* function sendmsg(){
+var AWS = require('aws-sdk');
+AWS.config.region = 'us-east-1';
+var sns = new AWS.SNS();
+
+var params = {
+  Message: 'this is a test message',
+  MessageStructure: 'string',
+  PhoneNumber: '+919989875853'
+};
+
+sns.publish(params, function(err, data) {
+  if (err) console.log(err, err.stack); // an error occurred
+  else     console.log(data);           // successful response
+});
+}*/
+</script>
+</head>
+
+<body>
+<h1> Patient Key Parameters Monitoring</h1>
+<table border = 1>
+    <td class="create_table">
+        <table border = 1>
+        <caption>Table Operations</caption>
+        <td><input id="createTableButton" type="button" value="Create Table" onclick="createpatient_data();" /></td><td><input id="deleteTableButton" type="button" value="Delete Table" onclick="deletepatient_data();" /></td><td><input id="listTablebutton" type="button" value="List Tables" onclick="listpatient_data();" /></td>
+        </table>
+    </td>
+    <td>
+        <table border = 1>
+            <caption>Create Patient Records Future work</caption>
+            <td><input id="createItem" type="button" value="Create Item" onclick="createItem();" /></td><td><input id="readItem" type="button" value="Read Item" onclick="readItem();" /></td><td><input id="updateItem" type="button" value="Update Item" onclick="updateItem();" /><td><input id="deleteItem" type="button" value="Delete Item" onclick="deleteItem();" /></td></td>
+        </table>
+    </td>
+    <td>
+        <table border = 1>
+            <caption>Query Data</caption>
+            <td><input id="queryData" type="button" value="Query" onclick="queryData();" /></td><td><input id="scanData" type="button" value="Scan" onclick="scanData();" /></td>
+        </table>
+    </td>
+    <td class="create_table">
+        <table border = 1>
+            <caption>Import JSON</caption>
+            <td><input type="file" id="fileinput" accept='application/json'/></td>
+        </table>
+    </td>
+</table>
+
+<br>
+<textarea readonly id= "textarea" style="width:500px; height:200px"></textarea>
+<br>
+
+<div class="container" >
+        <div id="data_read"> </div>
+</div>
+
+<script>
+    document.getElementById('fileinput').addEventListener('change', processFile, false);
+</script>
+</body>
+</html>
